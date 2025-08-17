@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="js/client.js" defer type="module"></script>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#128163</text></svg>">
+  <title>Chess</title>
+  <style>
+    .board{display:grid;grid-template-columns:repeat(8,min(10vw, 10vh));grid-auto-rows:min(10vw, 10vh);}
+    .cell{display:flex;align-items:center;justify-content:center;font-size:min(8vw, 8vh);user-select:none}
+    .light{background:#f0d9b5}
+    .dark{background:#b58863}
+	.light-gray { background: #c0c0c0; }
+    .dark-gray { background: #808080; }
+	.captured { background: #bb4e4e; }
+	.cell.progress{border-bottom:4px solid #1e6fff}
+	.cell.selected{border:4px solid #1e6fff}
+	.cell.target{border:4px solid #1e6fff77}
+  </style>
+</head>
+
+<body>
+  <div id="board" class="board"></div>
+  <div id="message"></div>
+</body>
+
+</html>

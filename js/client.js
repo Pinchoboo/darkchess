@@ -267,6 +267,9 @@ function check_game(data) {
 
 	state.known_board = board
 	chess.renderChessboard(state)
+	// todo: set attacked square if any
+	// allow resign
+	// improve join, host replay workflow 
 	document.getElementById('message').innerText = 'Game finnished'
 	return true
 }

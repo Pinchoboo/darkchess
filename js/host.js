@@ -14,7 +14,7 @@ export async function host() {
 
 		peer.on('connection', function (conn) {
 			conn.on('data', (data) => handleData(conn, data.type, data.data));
-			conn.on('close', () => handleData(conn, MessageType.Close, null) || location.reload())
+			conn.on('close', () => handleData(conn, MessageType.Close, null))
 			conn.on('error', (err) => { console.log(err) })
 		});
 

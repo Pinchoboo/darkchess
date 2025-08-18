@@ -15,12 +15,30 @@
 	.cell.progress{border-bottom:4px solid #1e6fff}
 	.cell.selected{border:4px solid #1e6fff}
 	.cell.target{border:4px solid #1e6fff77}
+	#popup {
+      position: fixed;
+      top: 10px;
+      left: 280px;
+      background: #333;
+      color: #fff;
+      padding: 15px 20px;
+      border-radius: 5px;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+	  z-index: -9999;
+    }
+    #popup.show {
+      opacity: 1;
+	  z-index: 9999;
+    }
   </style>
 </head>
 
 <body>
+  <div id="popup"><h2>Copied link!</h2></div>
   <div id="board" class="board"></div>
   <div id="message"></div>
+  <input type="text" id="hidden" style="display: none;">
 </body>
 
 </html>

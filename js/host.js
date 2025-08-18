@@ -30,6 +30,6 @@ window.copy = (s) => {
 		popup.classList.add("show");
 		setTimeout(() => {
 			popup.classList.remove("show");
-		}, 3000);
+		}, 1000);
 	});
 }

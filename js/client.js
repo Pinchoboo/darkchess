@@ -203,6 +203,12 @@ export function click(i) {
 }
 
 function check_game(data) {
+	document.getElementById('message').innerText = 'Checking validity of game...'
+	let check_game_timeout = setTimeout(() => {
+		console.log('check game timeout', data)
+		document.getElementById('message').innerText = 'Game is invalid'
+	}, 5000 + state.moves.length * 500)
+
 	{ // Check commits 
 		let calculated_commits = data.moves.map(m => hash(data.commit_prefix + JSON.stringify(m)))
 		if (calculated_commits.length != data.moves.length) {
@@ -293,6 +299,7 @@ function check_game(data) {
 	state.known_board = board
 	chess.renderChessboard(state)
 	// todo: set attacked square if any, allow resign, improve join, host replay workflow 
+	clearTimeout(check_game_timeout)
 	document.getElementById('message').innerText = 'Game finnished'
 	return true
 }

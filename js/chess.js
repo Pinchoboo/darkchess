@@ -13,6 +13,17 @@ export function idx(x, y) {
 		return x + (y * SIZE)
 	}
 }
+function empty(board, x, y) {
+	return board[idx(x, y)]?.t == ' '
+}
+
+function enemy(board, x, y, is_white) {
+	return board[idx(x, y)]?.t && (board[idx(x, y)].t != ' ' && white(board[idx(x, y)]) != is_white)
+}
+
+function empty_or_enemy(board, x, y, is_white) {
+	return empty(board, x, y) || enemy(board, x, y, is_white)
+}
 
 export function white(p) {
 	return /^[A-Z]$/.test(p.t)
@@ -166,18 +177,6 @@ export function choices(rays) {
 	return { rays: rays, choices: choices}
 }
 
-function empty_or_enemy(board, x, y, is_white) {
-	return empty(board, x, y) || enemy(board, x, y, is_white)
-}
-
-function enemy(board, x, y, is_white) {
-	return board[idx(x, y)]?.t && (board[idx(x, y)].t != ' ' && white(board[idx(x, y)]) != is_white)
-}
-
-function empty(board, x, y) {
-	return board[idx(x, y)]?.t == ' '
-}
-
 function valid_moves_(board, x, y, dx, dy, is_white) {
 	let results = []
 	for (let d = 1; d < SIZE; d++) {
@@ -228,15 +227,15 @@ export function valid_moves(board, i) {
 			if (empty_or_enemy(board,x + 1, y - 1, is_white)) { results.push({ type: Move.Normal, loc: idx(x + 1, y - 1) }) }
 
 			if (board[i].f == 0) {
-				if (empty(board, x - (1 * dir), y) && empty(board, x - (2 * dir), y) &&
-					board[idx(x - (3 * dir), y)].t.toLowerCase() == 'r' &&
-					board[idx(x - (3 * dir), y)].f == 0) {
-					results.push({ type: Move.Castle, loc: idx(x - (2 * dir), y), rook_from: idx(x - (3 * dir), y), rook_to: idx(x - (1 * dir), y) })
+				if (empty(board, x - 1, y) && empty(board, x - 2, y) &&
+					board[idx(x - 3, y)].t.toLowerCase() == 'r' &&
+					board[idx(x - 3, y)].f == 0) {
+					results.push({ type: Move.Castle, loc: idx(x - 2, y), rook_from: idx(x - 3, y), rook_to: idx(x - 1, y) })
 				}
 
-				if (empty(board, x + (1 * dir), y) && empty(board, x + (2 * dir), y) && empty(board, x + (3 * dir), y) &&
-					board[idx(x + (4 * dir), y)].t.toLowerCase() == 'r' && board[idx(x + (4 * dir), y)].f == 0) {
-					results.push({ type: Move.Castle, loc: idx(x + (2 * dir), y), rook_from: idx(x + (4 * dir), y), rook_to: idx(x + (1 * dir), y) })
+				if (empty(board, x + 1, y) && empty(board, x + 2, y) && empty(board, x + 3, y) &&
+					board[idx(x + 4, y)].t.toLowerCase() == 'r' && board[idx(x + 4, y)].f == 0) {
+					results.push({ type: Move.Castle, loc: idx(x + 2, y), rook_from: idx(x + 4, y), rook_to: idx(x + 1, y) })
 				}
 			}
 			break;
@@ -281,11 +280,12 @@ export function board_after_move(board, move) {
 	board[move.move.loc] = board[move.loc]
 	board[move.move.loc].f = 1
 	board[move.loc] = cell(' ')
-	if (move.type == Move.Promote) {
+	console.log(move.move.type, Move.Castle)
+	if (move.move.type == Move.Promote) {
 		board[move.move.loc].t = white(board[move.move.loc]) ? 'Q' : 'q'
-	} else if (move.type == Move.Castle) {
-		board[move.rook_to] = board[move.rook_from]
-		board[move.rook_from] = cell(' ')
+	} else if (move.move.type == Move.Castle) {
+		board[move.move.rook_to] = board[move.move.rook_from]
+		board[move.move.rook_from] = cell(' ')
 	}
 	return board
 }

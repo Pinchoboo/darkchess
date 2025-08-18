@@ -1,6 +1,6 @@
 import { hash } from './malicious-secure-ot.js';
 import { click } from './client.js'
-import { Move } from './enums.js';
+import { Move, State } from './enums.js';
 export const SIZE = 8
 
 
@@ -66,11 +66,23 @@ export function update_board(state, result) {
 	state.rays.forEach(r => {
 		let i = idx(r[0], r[1])
 		if (state.known_board[i].t == '~') {
-			state.known_board[i] = result[i]
+			if('prnbkq '.includes(result?.[i]?.t?.toLowerCase()) && typeof result?.[i]?.f == 'number'){
+				state.known_board[i] = cell(result[i].t, result[i].f)
+			}else{
+				document.getElementById('message').innerText = 'Game is invalid'
+				state.state = State.GameOver
+				return
+			}
+			
 		}
 	});
 	for (let d = 0; d < state.choices.length; d++) {
 		if (state.choices[d] == 0) {
+			if(typeof result[d] != 'string' && result[d].length != state.proof.length){
+				document.getElementById('message').innerText = 'Game is invalid'
+				state.state = State.GameOver
+				return
+			}
 			state.proof = xorHex(state.proof, result[d])
 		}
 	}
@@ -84,7 +96,7 @@ export function check_captured(state, result) {
 	for (let d = 0; d < state.choices.length; d++) {
 		if (state.choices[d] == 0) {
 			state.proof = xorHex(state.proof, result[d])
-		} else if (result[d].t != ' ') {
+		} else if (result?.[d]?.t != ' ') {
 			state.my_board[d] = cell(' ')
 			state.capture = d
 		}

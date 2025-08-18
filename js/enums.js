@@ -13,3 +13,7 @@ export const MessageType = createEnum(
 export const Move = createEnum(
   ['Normal', 'Promote', 'Castle', 'EnPassant']
 );
+
+export const State = createEnum(
+  ['Preinit', 'Init', 'MyTurn', 'OpponentsTurn', 'SendintOT', 'ReceivingOT', 'GameOver']
+);

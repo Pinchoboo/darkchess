@@ -1,4 +1,4 @@
-import { MessageType } from './enums.js'
+import { MessageType, State } from './enums.js'
 import * as messages from './messages.js'
 import * as chess from './chess.js'
 import { host } from './host.js'
@@ -11,6 +11,7 @@ const IS_HOST = urlParams.get('id') === null;
 let state = null
 function resetState() {
 	state = {
+		state: State.Preinit,
 		oponent: null,
 		turn: 0,
 		my_board: chess.my_board(IS_HOST),
@@ -23,7 +24,8 @@ function resetState() {
 		selected: null,
 		capture: null,
 		moves: [],
-		commits: []
+		commits: [],
+		known_boards: []
 	};
 }
 
@@ -31,12 +33,14 @@ export function handleData(conn, type, data) {
 	console.log(`[${conn.label}]${type}: ${data?.stage ? data.stage : JSON.stringify(data)}`)
 
 	if (state.oponent != conn.label) {
-		if (!state.oponent && type == MessageType.ClientHello) {
+		if (!state.oponent && type == MessageType.ClientHello && state.state == State.Preinit) {
 			state.oponent = conn.label
 			if (IS_HOST) {
+				state.state = State.Init
 				conn.send(messages.ClientHello())
 				document.getElementById('message').innerText = 'Your turn'
 			} else {
+				state.state = State.OpponentsTurn
 				state.known_board = chess.known_board(state, true)
 				chess.renderChessboard(state)
 				conn.send(messages.Setup())
@@ -57,6 +61,8 @@ function update(type, data, conn) {
 			resetState()
 			break;
 		case MessageType.Setup:
+			if(state.state != State.Init) { return }
+			state.state = State.MyTurn
 			// assert turn == 0 && state.ot.count != 1 && IS_HOST && setup not done
 			state.known_board = chess.known_board(state, true)
 			chess.renderChessboard(state)
@@ -65,6 +71,8 @@ function update(type, data, conn) {
 			// assert correct stage
 			switch (data.stage) {
 				case 'rsetup':
+					if(state.state != State.SendintOT) { return }
+
 					state.ot.Rs_bytes = data.data.map(d => new Uint8Array(d))
 					state.ot.count = (state.ot.count || 0) + 1
 					if (state.ot.count == 1) {
@@ -79,15 +87,14 @@ function update(type, data, conn) {
 						state.ot.ssetup = ot.ssetup()
 						conn.send(messages.Ot('srespond', { srespond: state.ot.resp, S_bytes: state.ot.ssetup.S_bytes }))
 					} else {
+						state.state = State.OpponentsTurn
 						conn.send(messages.Ot('srespond', { srespond: state.ot.resp }))
-					}
-
-
-					if (state.ot.count >= chess.SIZE) {
 						state.ot = {}
 					}
 					break;
 				case 'srespond':
+					if(state.state != State.ReceivingOT) { return }
+
 					let result = ot.rresult(state.ot.S_bytes, state.ot.rsetup, data.data.srespond.map(d => {
 						return {
 							e0: { nonce: new Uint8Array(d.e0.nonce), ct: new Uint8Array(d.e0.ct), tag: new Uint8Array(d.e0.tag) },
@@ -114,12 +121,16 @@ function update(type, data, conn) {
 					} else {
 						state.ot = {}
 						state.waiting = false
-						
+						state.state = State.MyTurn
+						// todo: make more efficient
+						state.known_boards.push(JSON.parse(JSON.stringify(state.known_board)))
 					}
 					break;
 			}
 			break;
 		case MessageType.Commit:
+			if(state.state != State.OpponentsTurn){ return }
+			state.state = State.ReceivingOT
 			// assert valid
 			state.turn++
 			state.commits.push(data.commit)
@@ -149,7 +160,8 @@ function update(type, data, conn) {
 
 
 export function click(i) {
-	if (state.turn % 2 == state.IS_HOST ? 0 : 1 && !state.waiting && !state.ended) {
+	// todo remove conditions
+	if (state.turn % 2 == state.IS_HOST ? 0 : 1 && !state.waiting && !state.ended && state.state == State.MyTurn) {
 		let s = state.my_board[i];
 		if (state.selected != null) {
 			let move = state.valid_moves.find(m => m.loc == i)
@@ -163,9 +175,11 @@ export function click(i) {
 
 				state.moves.push(move)
 				if (win) {
+					state.state = State.GameOver
 					state.ended = true;
 					state.conn.send(messages.EndGame({ proof: state.proof, moves: state.moves, commit_prefix: state.commit_prefix, commit: hash(state.commit_prefix + JSON.stringify(move)) }))
 				} else {
+					state.state = State.SendintOT
 					state.conn.send(messages.Commit({ commit: hash(state.commit_prefix + JSON.stringify(move)), S_bytes: state.ot.ssetup.S_bytes }))
 					document.getElementById('message').innerText = 'Opponents turn'
 				}
@@ -209,8 +223,7 @@ function check_game(data) {
 
 
 	//verify data.moves are valid, proof
-	// todo:  seen enemies is valid, captured pieces is valid
-	// todo check incomming data 
+	// todo check incomming OT data 
 	let board = chess.my_board(true)
 	{
 		let board2 = chess.my_board(false)
@@ -232,28 +245,40 @@ function check_game(data) {
 		let choices = board.map((c) => (c.t == ' ' || chess.white(c) == state.IS_HOST) ? 0 : 1)
 		// choices for capture check are made without knowledge of update
 		board = chess.board_after_move(board, move)
-		if (((i + 1) < state.moves.length + data.moves.length) && ((i + 1) % 2 == (!state.IS_HOST ? 0 : 1))) {
-			let count = 1
-			let no_read_proofs = chess.no_read_proofs(state.secret, i + 1, count)
-			for (let j = 0; j < board.length; j++) {
-				if (choices[j] == 0) {
-					proof_check = chess.xorHex(proof_check, no_read_proofs[j])
-				}
-			}
-			let rays_ = chess.rays(board, !state.IS_HOST)
-			while (count < chess.SIZE) {
-				count++
-				let { rays, choices } = chess.choices(rays_)
-				no_read_proofs = chess.no_read_proofs(state.secret, i + 1, count)
+		if ((i + 1) < state.moves.length + data.moves.length) {
+			if ((i + 1) % 2 == (!state.IS_HOST ? 0 : 1)) { // check their no_read_proofs
+				let count = 1
+				let no_read_proofs = chess.no_read_proofs(state.secret, i + 1, count)
 				for (let j = 0; j < board.length; j++) {
 					if (choices[j] == 0) {
 						proof_check = chess.xorHex(proof_check, no_read_proofs[j])
 					}
 				}
-				rays_ = rays.filter(r => {
-					return board[chess.idx(r[0], r[1])].t == ' '
-				})
+				let rays_ = chess.rays(board, !state.IS_HOST)
+				while (count < chess.SIZE) {
+					count++
+					let { rays, choices } = chess.choices(rays_)
+					no_read_proofs = chess.no_read_proofs(state.secret, i + 1, count)
+					for (let j = 0; j < board.length; j++) {
+						if (choices[j] == 0) {
+							proof_check = chess.xorHex(proof_check, no_read_proofs[j])
+						}
+					}
+					rays_ = rays.filter(r => {
+						return board[chess.idx(r[0], r[1])].t == ' '
+					})
 
+				}
+			} else {
+				for(let b = 0; b < board.length; b++){
+					if(state.known_boards[(i - (i % 2))/2][b].t != '~' && state.known_boards[(i - (i % 2))/2][b].t != board[b].t){
+						console.log('known board check failed:', i, b)
+						console.log(state.known_boards[(i - (i % 2))/2])
+						console.log(board)
+						document.getElementById('message').innerText = 'Game is invalid'
+						return false
+					}
+				}
 			}
 		}
 	}
@@ -267,9 +292,7 @@ function check_game(data) {
 
 	state.known_board = board
 	chess.renderChessboard(state)
-	// todo: set attacked square if any
-	// allow resign
-	// improve join, host replay workflow 
+	// todo: set attacked square if any, allow resign, improve join, host replay workflow 
 	document.getElementById('message').innerText = 'Game finnished'
 	return true
 }

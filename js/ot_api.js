@@ -15,19 +15,40 @@ function encTxt(s) {
 
 export function ssetup() {
 	//{ y, S_bytes, T_bytes }
-	return co15_sender_setup()
+	try {
+		return co15_sender_setup()
+	} catch (error) {
+		alert("Something went wrong, sorry :(")
+		console.log(error)
+	}
+	
 } 
 export function rsetup(S_bytes, choice_bits){
-   choice_bits = Uint8Array.from(choice_bits);
-   //{ xs, Rs_bytes }
-   return {choice_bits: choice_bits, ...co15_receiver_choose(S_bytes, choice_bits)};
+	try {
+		choice_bits = Uint8Array.from(choice_bits);
+		//{ xs, Rs_bytes }
+		return {choice_bits: choice_bits, ...co15_receiver_choose(S_bytes, choice_bits)};
+   	} catch (error) {
+		alert("Something went wrong, sorry :(")
+		console.log(error)
+	}
 }
 
 export function srespond(ssetup, Rs_bytes, messages0, messages1){
-   return co15_sender_respond(ssetup.y, ssetup.S_bytes, ssetup.T_bytes, Rs_bytes, { messages0: messages0.map(encTxt), messages1: messages1.map(encTxt) });
+	try {
+   		return co15_sender_respond(ssetup.y, ssetup.S_bytes, ssetup.T_bytes, Rs_bytes, { messages0: messages0.map(encTxt), messages1: messages1.map(encTxt) });
+   	} catch (error) {
+		alert("Something went wrong, sorry :(")
+		console.log(error)
+	}
 }
 
 export function rresult(S_bytes, rsetup, data){
-	let td = new TextDecoder()
+	try {
+		let td = new TextDecoder()
 	return co15_receiver_output(S_bytes, rsetup.Rs_bytes, rsetup.xs, rsetup.choice_bits, data).map(d => JSON.parse(td.decode(d)));
+		} catch (error) {
+		alert("Something went wrong, sorry :(")
+		console.log(error)
+	}
 }

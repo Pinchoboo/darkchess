@@ -280,7 +280,6 @@ export function board_after_move(board, move) {
 	board[move.move.loc] = board[move.loc]
 	board[move.move.loc].f = 1
 	board[move.loc] = cell(' ')
-	console.log(move.move.type, Move.Castle)
 	if (move.move.type == Move.Promote) {
 		board[move.move.loc].t = white(board[move.move.loc]) ? 'Q' : 'q'
 	} else if (move.move.type == Move.Castle) {

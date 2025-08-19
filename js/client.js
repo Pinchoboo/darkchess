@@ -71,7 +71,7 @@ function update(type, data, conn) {
 			// assert correct stage
 			switch (data.stage) {
 				case 'rsetup':
-					if(state.state != State.SendintOT) { return }
+					if(state.state != State.SendingOT) { return }
 
 					state.ot.Rs_bytes = data.data.map(d => new Uint8Array(d))
 					state.ot.count = (state.ot.count || 0) + 1
@@ -179,7 +179,7 @@ export function click(i) {
 					state.ended = true;
 					state.conn.send(messages.EndGame({ proof: state.proof, moves: state.moves, commit_prefix: state.commit_prefix, commit: hash(state.commit_prefix + JSON.stringify(move)) }))
 				} else {
-					state.state = State.SendintOT
+					state.state = State.SendingOT
 					state.conn.send(messages.Commit({ commit: hash(state.commit_prefix + JSON.stringify(move)), S_bytes: state.ot.ssetup.S_bytes }))
 					document.getElementById('message').innerText = 'Opponents turn'
 				}
